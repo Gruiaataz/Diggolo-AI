@@ -2,15 +2,13 @@ const sendBtn = document.getElementById('sendBtn');
 const userInput = document.getElementById('userInput');
 const chatBox = document.getElementById('chatBox');
 
-// Cheia ta (asigură-te că e exact așa, fără spații)
+// FOLOSIM UN MODEL MAI MIC ȘI MAI STABIL PENTRU RENDER
 const HF_TOKEN = "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"; 
+const MODEL_URL = "https://api-inference.huggingface.co/models/facebook/blenderbot-400M-distill";
 
 async function getAIResponse(prompt) {
-    // Folosim un model foarte stabil de la Hugging Face
-    const model = "facebook/blenderbot-400M-distill"; 
-
     try {
-        const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+        const response = await fetch(MODEL_URL, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${HF_TOKEN}`,
@@ -21,17 +19,16 @@ async function getAIResponse(prompt) {
 
         const data = await response.json();
 
-        // Dacă primim eroare de încărcare, e normal la prima pornire
         if (data.error) {
-            return "AI-Diggolo se pregătește (serverul se încarcă). Te rog mai apasă o dată butonul în 10 secunde.";
+            if (data.error.includes("currently loading")) {
+                return "AI-Diggolo se trezește acum... Mai încearcă o dată în 10 secunde.";
+            }
+            return "Eroare AI: " + data.error;
         }
 
-        // Blenderbot returnează direct textul în generated_text
         return data.generated_text || data[0].generated_text;
-
     } catch (e) {
-        console.error("Eroare Detaliată:", e);
-        return "Eroare: Browserul a blocat conexiunea. Încearcă să deschizi fișierul index.html cu 'Right Click -> Open with Chrome' (nu prin dublu click direct pe fișier, uneori contează).";
+        return "Eroare de rețea. Verifică dacă ai adăugat corect cheia API.";
     }
 }
 
@@ -43,7 +40,7 @@ async function handleSend() {
     userInput.value = "";
 
     const loadingId = "loading-" + Date.now();
-    addMessage("AI-Diggolo răspunde...", 'ai-message', null, loadingId);
+    addMessage("AI-Diggolo gândește...", 'ai-message', null, loadingId);
 
     const aiResponse = await getAIResponse(text);
 
@@ -61,14 +58,6 @@ function addMessage(text, className, code = null, id = null) {
     msgDiv.className = `message ${className}`;
     if (id) msgDiv.id = id;
     msgDiv.innerText = text;
-
-    if (code) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'code-wrapper';
-        wrapper.innerHTML = `<pre class="code-block">${code}</pre>`;
-        msgDiv.appendChild(wrapper);
-    }
-
     chatBox.appendChild(msgDiv);
     chatBox.scrollTop = chatBox.scrollHeight;
     return msgDiv;
